@@ -2,6 +2,12 @@
 
     var canvas = document.getElementById('starfield');
     var ctx = canvas.getContext('2d');
+
+    var world = { w: 200, h : 200};
+    var view = {x: 0, y : 0, r : 0, xr : 1, yr: 1}
+
+    window.view = view;
+
     var entities  = [];
 
     // resize the canvas to fill browser window dynamically
@@ -9,24 +15,65 @@
     function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2);
+
             // Redraw all things
-            entities.forEach(draw);
+            draw();
     }
     resizeCanvas();
 
     
+    function draw () {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.resetTransform();
 
-    function draw (entity) {
-        ctx.save();
-        ctx.translate(entity.x, entity.y);
-        entity.draw(ctx);
-        ctx.restore();
+        var x = view.x;
+        var y = view.y;
+        var Y = canvas.height;
+        var X = canvas.width;
+        var h = Math.sqrt((X*X) + (Y*Y));
+        var A = Math.acos(Y/h);
+
+        var _A = A - view.r;
+        var y_min = Math.abs(h *Math.cos(_A));
+        var x_min = Math.abs(h * Math.cos((Math.PI/2) - _A));
+        var xr = Math.ceil(x_min / world.w);
+        var yr = Math.ceil(y_min / world.h);
+
+        x -= world.w - (((X - world.w)/ 2) % (world.w));
+        y -= world.h - (((Y - world.h)/ 2) % (world.h));
+
+        var d_x = x - ((x >= 0) ? world.w : 0);
+        var d_y = y - ((y >= 0) ? world.h : 0);
+
+        xr += (((world.w * xr) + d_x ) < x_min)? 1 : 0;
+        yr += (((world.h * yr) + d_y ) < y_min)? 1 : 0;
+
+        view.xr = xr;
+        view.yr = yr;
+
+        ctx.translate(world.w/2 + d_x, world.h/2 + d_y);
+
+        for(var i = 0; i < xr; i++) {
+            for(var j = 0; j < yr; j++) {
+                ctx.save();
+
+                ctx.translate((world.w * i),(world.h * j));
+
+                entities.forEach(function (entity) {
+                    ctx.save();
+                    ctx.translate(entity.x, entity.y);
+                    entity.draw(ctx);
+                    ctx.restore();
+                });
+
+                ctx.restore();
+            }
+        }
+
     }
 
     function loop () {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        entities.forEach(draw);
+        draw();
         return loop;
     }
 
@@ -59,7 +106,26 @@
         }
     }
 
-    entities.push(new Player());
+    class Square extends Entity {
+        constructor(params = {})
+        {
+            super(params);
+        }
+
+        draw(ctx) 
+        {
+            ctx.beginPath();
+            ctx.moveTo(-10,-10);
+            ctx.lineTo(-10, 10);
+            ctx.lineTo(10, 10);
+            ctx.lineTo(10, -10);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    entities.push(new Player({x : 99, y : 99}));
+    entities.push(new Square());
 
     var startLoop = function(loop){
         window.setTimeout(startLoop, 40, loop);
