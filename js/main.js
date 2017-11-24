@@ -4,9 +4,10 @@
     var ctx = canvas.getContext('2d');
 
     var world = { w: 200, h : 200};
-    var view = {x: 0, y : 0, r : 0, xr : 1, yr: 1}
+    var view = {x: 0, y : 0, r : Math.PI/4, xr : 1, yr: 1}
 
     window.view = view;
+    window.canvas = canvas;
 
     var entities  = [];
 
@@ -31,28 +32,35 @@
         var Y = canvas.height;
         var X = canvas.width;
         var h = Math.sqrt((X*X) + (Y*Y));
-        var A = Math.acos(Y/h);
 
-        var _A = A - view.r;
-        var y_min = Math.abs(h *Math.cos(_A));
-        var x_min = Math.abs(h * Math.cos((Math.PI/2) - _A));
+        var y_min = Math.abs(h * Math.cos(view.r - Math.acos(Y/h)));
+        var x_min = Math.abs(h * Math.cos(view.r - Math.acos(X/h)));
         var xr = Math.ceil(x_min / world.w);
         var yr = Math.ceil(y_min / world.h);
 
-        x -= world.w - (((X - world.w)/ 2) % (world.w));
-        y -= world.h - (((Y - world.h)/ 2) % (world.h));
+        x -= world.w - ((((xr * world.w) - world.w)/ 2) % (world.w));
+        y -= world.h - ((((yr * world.h) - world.h)/ 2) % (world.h));
 
         var d_x = x - ((x >= 0) ? world.w : 0);
         var d_y = y - ((y >= 0) ? world.h : 0);
 
+        
+        ctx.translate(X/2, Y/2);
+        ctx.fillRect(-X/2, 0, X, 1);
+        ctx.fillRect(0, -Y/2, 1, Y);
+        ctx.rotate(-view.r);
+        ctx.fillRect(0, -Y/2, 1, Y);
+        ctx.translate(-(xr * world.w)/2, -(yr * world.h)/2);
+        ctx.translate(world.w/2 + d_x, world.h/2 + d_y);
+        
         xr += (((world.w * xr) + d_x ) < x_min)? 1 : 0;
         yr += (((world.h * yr) + d_y ) < y_min)? 1 : 0;
 
         view.xr = xr;
         view.yr = yr;
-
-        ctx.translate(world.w/2 + d_x, world.h/2 + d_y);
-
+        view.y_min = y_min;
+        view.x_min = x_min;
+        
         for(var i = 0; i < xr; i++) {
             for(var j = 0; j < yr; j++) {
                 ctx.save();
