@@ -22,15 +22,31 @@
     }
     resizeCanvas();
 
-    function step(size) {
+    function step(timeStep_s) {
         entities.forEach(entity => {
-            entity.x += entity.vx * size;
-            entity.y += entity.vy * size;
+
+            // apply forces
+            var f = entity.sumForces();
+            var t = entity.sumTorques();
+
+            entity.ax = entity.m * f.x;
+            entity.ay = entity.m * f.y;
+
+            entity.at = entity.m * t;
+
+            entity.vx += entity.ax * timeStep_s;
+            entity.vy += entity.ay * timeStep_s;
+            entity.vt += entity.at * timeStep_s;
+            entity.x += entity.vx * timeStep_s;
+            entity.y += entity.vy * timeStep_s;
+            entity.t += entity.vt * timeStep_s;
 
             while(entity.x >= world.w) entity.x -= world.w;
             while(entity.x < 0) entity.x += world.w;
             while(entity.y >= world.h) entity.y -= world.h;
             while(entity.y < 0) entity.y += world.h;
+            while(entity.t > Math.PI) entity -= Math.PI;
+            while(entity.t <= -Math.PI) entity += Math.PI;
         });
     };
 
@@ -85,6 +101,7 @@
                 entities.forEach(function (entity) {
                     ctx.save();
                     ctx.translate(entity.x, entity.y);
+                    ctx.rotate(-entity.t);
                     entity.draw(ctx);
                     ctx.restore();
                 });
@@ -101,12 +118,56 @@
     }
 
     class Entity {
-        constructor({x = 0, y = 0, vx = 0, vy=0})
+        constructor({x = 0, y = 0, t = 0, vx = 0, vy=0, vt = 0,  m=0, ax = 0, ay=0, at = 0, forces = [], torques = []})
         {
             this.x = x;
             this.y = y;
+            this.t = t;
             this.vx = vx;
             this.vy = vy;
+            this.vt = vt;
+            this.ax = ax;
+            this.ay = ay;
+            this.at = at;
+            this.m = m;
+            this.forces = forces;
+            this.torques = torques;
+        }
+
+        addForce(force) {
+            this.forces.push(force);
+            return () => {this.removeForce(force);}
+        }
+
+        removeForce(force) {
+            _.remove(this.forces, f => f === force);
+        }
+
+        addTorque(torque) {
+            this.torques.push(torque);
+            return () => {this.removeTorque(torque);}
+        }
+
+        removeTorque(torque) {
+            _.remove(this.torques, t=> t === torque);
+        }
+
+        sumForces() {
+            var fx = 0;
+            var fy = 0;
+            this.forces.forEach(force => {
+                var f = force(this);
+                fx += f.x;
+                fy += f.y;
+            });
+
+            return {x : fx, y : fy};
+        }
+
+        sumTorques() {
+            var t = 0;
+            this.torques.forEach(torque => t+= torque(this));
+            return t;
         }
 
         draw(context) {
@@ -117,11 +178,11 @@
     class Player extends Entity {
         constructor(params = {})
         {
-            super(params);
+            super({m : 1, ...params});
         }
 
         draw(ctx) 
-        {
+        {   
             ctx.beginPath();
             ctx.moveTo(0, -20);
             ctx.lineTo(-10, 10);
@@ -134,7 +195,7 @@
     class Square extends Entity {
         constructor(params = {})
         {
-            super(params);
+            super({...params});
         }
 
         draw(ctx) 
@@ -153,30 +214,36 @@
     entities.push(player);
     entities.push(new Square());
 
-    this.addEventListener('keydown', (event) => {
+    function addEventListener(name, func) {
+        window.addEventListener(name, func);
+        return () => removeEventListener(name, func);
+    }
+
+    function addOnetimeListener(name,func)
+    {
+        var rel;
+        rel = addEventListener(name, (...args) => {func.apply(args); rel();});
+    }
+
+    addEventListener('keydown', (event) => {
+        var f = -100;
+        var t = 5;
+
         if (event.keyCode == 37) {
-            player.vx = -100;
+            var rf = player.addTorque((e) => {return t; });
+            addOnetimeListener('keyup', () => {if(event.keyCode == 37) rf()});
         } else if (event.keyCode == 39) {
-            player.vx = 100;
+            var rf = player.addTorque((e) => {return -t});
+            addOnetimeListener('keyup', () => {if(event.keyCode == 39) rf()});
         } else if (event.keyCode == 38) {
-            player.vy = -100;
+            var rf = player.addForce((e) => {return {x: f * Math.sin(e.t), y: f * Math.cos(e.t)}});
+            addOnetimeListener('keyup', () => {if(event.keyCode == 38) rf()});
         } else if (event.keyCode == 40) {
-            player.vy = 100;
+            var rf = player.addForce((e) => {return {x: -f * Math.sin(e.t), y: -f * Math.cos(e.t)}});
+            addOnetimeListener('keyup', () => {if(event.keyCode == 40) rf()});
         } 
     });
 
-    
-    this.addEventListener('keyup', (event) => {
-        if (event.keyCode == 37) {
-            player.vx = 0;
-        } else if (event.keyCode == 39) {
-            player.vx = 0;
-        } else if (event.keyCode == 38) {
-            player.vy = 0;
-        } else if (event.keyCode == 40) {
-            player.vy = 0;
-        } 
-    });
 
     var startLoop = function(loop){
         window.setTimeout(startLoop, 40, loop);
