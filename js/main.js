@@ -4,7 +4,7 @@
     var ctx = canvas.getContext('2d');
 
     var world = { w: 200, h : 200};
-    var view = {x: 0, y : 0, r : Math.PI/4, xr : 1, yr: 1}
+    var view = {x: 0, y : 0, r : 0.5, xr : 0, yr: 0}
 
     window.view = view;
     window.canvas = canvas;
@@ -21,6 +21,18 @@
             draw();
     }
     resizeCanvas();
+
+    function step(size) {
+        entities.forEach(entity => {
+            entity.x += entity.vx * size;
+            entity.y += entity.vy * size;
+
+            while(entity.x >= world.w) entity.x -= world.w;
+            while(entity.x < 0) entity.x += world.w;
+            while(entity.y >= world.h) entity.y -= world.h;
+            while(entity.y < 0) entity.y += world.h;
+        });
+    };
 
     
     function draw () {
@@ -61,6 +73,9 @@
         view.y_min = y_min;
         view.x_min = x_min;
         
+        
+        ctx.clearRect(0, 0, (world.w * xr), (world.h * yr));
+
         for(var i = 0; i < xr; i++) {
             for(var j = 0; j < yr; j++) {
                 ctx.save();
@@ -80,16 +95,18 @@
 
     }
 
-    function loop () {
+    function loop (size) {
+        step(size/1000);
         draw();
-        return loop;
     }
 
     class Entity {
-        constructor({x = 0, y = 0})
+        constructor({x = 0, y = 0, vx = 0, vy=0})
         {
             this.x = x;
             this.y = y;
+            this.vx = vx;
+            this.vy = vy;
         }
 
         draw(context) {
@@ -132,12 +149,38 @@
         }
     }
 
-    entities.push(new Player({x : 99, y : 99}));
+    var player = new Player({x : 99, y : 99});
+    entities.push(player);
     entities.push(new Square());
+
+    this.addEventListener('keydown', (event) => {
+        if (event.keyCode == 37) {
+            player.vx = -100;
+        } else if (event.keyCode == 39) {
+            player.vx = 100;
+        } else if (event.keyCode == 38) {
+            player.vy = -100;
+        } else if (event.keyCode == 40) {
+            player.vy = 100;
+        } 
+    });
+
+    
+    this.addEventListener('keyup', (event) => {
+        if (event.keyCode == 37) {
+            player.vx = 0;
+        } else if (event.keyCode == 39) {
+            player.vx = 0;
+        } else if (event.keyCode == 38) {
+            player.vy = 0;
+        } else if (event.keyCode == 40) {
+            player.vy = 0;
+        } 
+    });
 
     var startLoop = function(loop){
         window.setTimeout(startLoop, 40, loop);
-        loop();
+        loop(40);
     };
     startLoop(loop);
 }());
