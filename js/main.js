@@ -3,7 +3,7 @@
     var canvas = document.getElementById('starfield');
     var ctx = canvas.getContext('2d');
 
-    var world = { w: 200, h : 200};
+    var world = { w:500, h : 500};
     var view = {x: 0, y : 0, r : 0.5, xr : 0, yr: 0}
 
     window.view = view;
@@ -113,7 +113,10 @@
     }
 
     function loop (size) {
-        step(size/1000);
+        step(size/4000);
+        step(size/4000);
+        step(size/4000);
+        step(size/4000);
         draw();
     }
 
@@ -210,7 +213,7 @@
         }
     }
 
-    var player = new Player({x : 99, y : 99});
+    var player = new Player({x : 250, y : 250, vy : -84});
     entities.push(player);
     entities.push(new Square());
 
@@ -224,6 +227,25 @@
         var rel;
         rel = addEventListener(name, (...args) => {func.apply(args); rel();});
     }
+
+    player.addForce((p) => {
+        var g = -1000000;
+        f = {x: 0, y: 0};
+        for(var i = -1 ; i <= 1; i ++)
+        {
+            var x = p.x - (0 + i * world.w);
+            for(var j = -1 ; j <= 1; j ++)
+            {
+                var y = p.y - (0 + j * world.h);
+                var r2 = (y*y) + (x*x);
+                var r = Math.sqrt(r2);
+                var ft = p.m * g / r2;
+                f.x +=  ft * (x/r);
+                f.y +=  ft * (y/r);
+            }
+        }
+        return f;
+    })
 
     addEventListener('keydown', (event) => {
         var f = -100;
