@@ -3,7 +3,7 @@
     var canvas = document.getElementById('starfield');
     var ctx = canvas.getContext('2d');
 
-    var world = { w: 500, h: 500 };
+    var world = { w: 1000, h: 1000 };
     var view = { x: 0, y: 0, r: 0, xr: 0, yr: 0 }
 
     window.view = view;
@@ -25,16 +25,6 @@
     function step(timeStep_s) {
         entities.forEach(entity => {
 
-            // Intergrate Velocity -> New Positions
-            entity.x += entity.vx * timeStep_s;
-            entity.y += entity.vy * timeStep_s;
-            entity.t += entity.vt * timeStep_s;
-
-            // Intergrate Acceleration -> New Velocity
-            entity.vx += entity.ax * timeStep_s;
-            entity.vy += entity.ay * timeStep_s;
-            entity.vt += entity.at * timeStep_s;
-
             // sum forces and torques
             var f = entity.sumForces();
             var t = entity.sumTorques();
@@ -44,6 +34,17 @@
             entity.ay = entity.m * f.y;
             // Torque -> Rotational Acceleration
             entity.at = entity.m * t;
+
+           // Intergrate Acceleration -> New Velocity
+            entity.vx += entity.ax * timeStep_s;
+            entity.vy += entity.ay * timeStep_s;
+            entity.vt += entity.at * timeStep_s;
+
+            // Intergrate Velocity -> New Positions
+            entity.x += entity.vx * timeStep_s;
+            entity.y += entity.vy * timeStep_s;
+            entity.t += entity.vt * timeStep_s;
+
 
             while (entity.x >= world.w) entity.x -= world.w;
             while (entity.x < 0) entity.x += world.w;
@@ -212,21 +213,6 @@
         }
     }
 
-    var player = new Player({ x: 100, y: 0, vy: -89 });
-    entities.push(player);
-    var square = new Square();
-    entities.push(square);
-
-    function addEventListener(name, func) {
-        window.addEventListener(name, func);
-        return () => removeEventListener(name, func);
-    }
-
-    function addOnetimeListener(name, func) {
-        var rel;
-        rel = addEventListener(name, (...args) => { func.apply(args); rel(); });
-    }
-
     function calcForceDueToGravity(source, g, object) {
         var d = { x: object.x - source.x, y: object.y - source.y };
 
@@ -254,9 +240,34 @@
         return f;
     }
 
+
+    var player = new Player({ x: 250, y: -100 });
+    entities.push(player);
+    var square1 = new Square({x: -250});
+    entities.push(square1);
+    var square2 = new Square({x : 0, y : -250});
+    entities.push(square2);
+
+    function addEventListener(name, func) {
+        window.addEventListener(name, func);
+        return () => removeEventListener(name, func);
+    }
+
+    function addOnetimeListener(name, func) {
+        var rel;
+        rel = addEventListener(name, (...args) => { func.apply(args); rel(); });
+    }
+
+
     player.addForce((p) => {
-        return calcForceDueToGravity(square, 1000000, p)
+        return calcForceDueToGravity(square1, 1000000, p);
     })
+    
+    player.addForce((p) => {
+        return calcForceDueToGravity(square2, 1000000, p);
+    })
+
+
 
     addEventListener('keydown', (event) => {
         var f = -100;
