@@ -285,6 +285,9 @@
         } else if (event.keyCode == 40) {
             var rf = player.addForce((e) => { return { x: -f * Math.sin(e.t), y: -f * Math.cos(e.t) } });
             addOnetimeListener('keyup', () => { if (event.keyCode == 40) rf() });
+        } else if (event.keyCode == 32) {
+            player.at=0;
+            player.vt=0;
         }
     });
 
